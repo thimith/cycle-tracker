@@ -296,6 +296,9 @@
     </div>
   </div>
 
+  <!-- Loading -->
+  <div id="loading" style="display:none;text-align:center;padding:32px;font-size:13px;color:rgba(240,232,245,0.35);">Loading...</div>
+
   <!-- List -->
   <div id="people-list" style="display:flex;flex-direction:column;gap:12px;">
     <div class="empty-state" id="empty-state">
@@ -330,10 +333,48 @@
 </div>
 
 <script>
-  let people = JSON.parse(localStorage.getItem('cycle-tracker') || '[]');
+  // ─── Airtable config ──────────────────────────────────────────────────────
+  const AT_TOKEN  = 'patf72KaEU1HKTW34.072bc570f339f78418897898e9c605f9a00712022449eb6c249e9c598c68bffb';
+  const AT_BASE   = 'appouXjowVXYVtgW0';
+  const AT_TABLE  = 'People';
+  const AT_URL    = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}`;
+  const AT_HEADS  = { 'Authorization': `Bearer ${AT_TOKEN}`, 'Content-Type': 'application/json' };
 
-  function save() {
-    localStorage.setItem('cycle-tracker', JSON.stringify(people));
+  let people = []; // { id, name, date }
+
+  async function loadFromAirtable() {
+    showLoading(true);
+    try {
+      const res = await fetch(AT_URL + '?fields[]=Name&fields[]=Date', { headers: AT_HEADS });
+      const data = await res.json();
+      people = (data.records || []).map(r => ({
+        id: r.id,
+        name: r.fields.Name || '',
+        date: r.fields.Date || ''
+      })).filter(p => p.name && p.date);
+      renderAll();
+    } catch(e) {
+      console.error('Airtable load error', e);
+    }
+    showLoading(false);
+  }
+
+  async function saveToAirtable(name, date) {
+    const res = await fetch(AT_URL, {
+      method: 'POST',
+      headers: AT_HEADS,
+      body: JSON.stringify({ records: [{ fields: { Name: name, Date: date } }] })
+    });
+    const data = await res.json();
+    return { id: data.records[0].id, name, date };
+  }
+
+  async function deleteFromAirtable(id) {
+    await fetch(`${AT_URL}/${id}`, { method: 'DELETE', headers: AT_HEADS });
+  }
+
+  function showLoading(on) {
+    document.getElementById('loading').style.display = on ? '' : 'none';
   }
 
   // Cycle constants
@@ -421,7 +462,14 @@
       rm.innerHTML = '&times;';
       rm.title = 'Remove ' + p.name;
       rm.setAttribute('aria-label', 'Remove ' + p.name);
-      rm.onclick = () => { if (confirm(`Remove ${p.name}?`)) { people.splice(i,1); save(); renderAll(); } };
+      rm.onclick = async () => {
+        if (confirm(`Remove ${p.name}?`)) {
+          rm.disabled = true;
+          await deleteFromAirtable(p.id);
+          people.splice(i, 1);
+          renderAll();
+        }
+      };
 
       card.appendChild(nameCol);
       card.appendChild(strip);
@@ -450,19 +498,19 @@
     setTimeout(() => el.style.borderColor = '', 800);
   }
 
-  function addPerson() {
+  async function addPerson() {
     const nameEl = document.getElementById('input-name');
     const dateEl = document.getElementById('input-date');
     const name = nameEl.value.trim();
     const date = dateEl.value;
     if (!name) { shake(nameEl); nameEl.focus(); return; }
     if (!date) { shake(dateEl); dateEl.focus(); return; }
-    people.push({ name, date });
-    save();
-    renderAll();
     closeModal();
     nameEl.value = '';
     dateEl.value = new Date().toISOString().split('T')[0];
+    const record = await saveToAirtable(name, date);
+    people.push(record);
+    renderAll();
   }
 
   document.addEventListener('keydown', e => {
@@ -474,7 +522,7 @@
   // Default date = today
   document.getElementById('input-date').value = new Date().toISOString().split('T')[0];
 
-  renderAll();
+  loadFromAirtable();
 </script>
 </body>
 </html>
