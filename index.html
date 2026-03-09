@@ -334,7 +334,7 @@
 
 <script>
   // ─── Airtable config ──────────────────────────────────────────────────────
-  const AT_TOKEN  = 'patf72KaEU1HKTW34.072bc570f339f78418897898e9c605f9a00712022449eb6c249e9c598c68bffb';
+  const AT_TOKEN  = 'pattjP8yx9tGtCkTy.f18587f7e19faad9130d2ec2e19883d4dc82ccbf2683a8fff6476c269b715061';
   const AT_BASE   = 'appouXjowVXYVtgW0';
   const AT_TABLE  = 'People';
   const AT_URL    = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}`;
@@ -366,6 +366,7 @@
       body: JSON.stringify({ records: [{ fields: { Name: name, Date: date } }] })
     });
     const data = await res.json();
+    if (data.error) { return null; }
     return { id: data.records[0].id, name, date };
   }
 
@@ -417,20 +418,37 @@
     people.forEach((p, i) => {
       const card = document.createElement('div');
       card.className = 'person-card';
-      card.style.cssText = 'padding:16px 20px;display:flex;align-items:center;gap:16px;';
+      card.style.cssText = 'padding:14px 16px;position:relative;';
 
-      // Name
+      // Remove button — top right
+      const rm = document.createElement('button');
+      rm.className = 'btn-remove';
+      rm.style.cssText = 'position:absolute;top:10px;right:10px;width:22px;height:22px;font-size:13px;';
+      rm.innerHTML = '&times;';
+      rm.title = 'Remove ' + p.name;
+      rm.setAttribute('aria-label', 'Remove ' + p.name);
+      rm.onclick = async () => {
+        if (confirm(`Remove ${p.name}?`)) {
+          rm.disabled = true;
+          await deleteFromAirtable(p.id);
+          people.splice(i, 1);
+          renderAll();
+        }
+      };
+      card.appendChild(rm);
+
+      // Name row
       const nameCol = document.createElement('div');
-      nameCol.style.cssText = 'min-width:96px;max-width:96px;';
+      nameCol.style.cssText = 'margin-bottom:10px;padding-right:28px;';
       nameCol.innerHTML = `
-        <div style="font-weight:600;font-size:15px;color:#f0e8f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.name)}</div>
-        <div style="font-size:11px;color:rgba(240,232,245,0.3);margin-top:3px;">Since ${fmt(p.date)}</div>
+        <div style="font-weight:600;font-size:15px;color:#f0e8f5;">${esc(p.name)}</div>
+        <div style="font-size:11px;color:rgba(240,232,245,0.3);margin-top:2px;">Since ${fmt(p.date)}</div>
       `;
 
-      // Strip — today + 28 days, same dates across all rows
+      // Strip — today + 28 days, full width
       const strip = document.createElement('div');
       strip.className = 'day-strip';
-      strip.style.flex = '1';
+      strip.style.width = '100%';
 
       for (let d = 0; d < 28; d++) {
         const cellDate = new Date(today);
@@ -509,8 +527,7 @@
     nameEl.value = '';
     dateEl.value = new Date().toISOString().split('T')[0];
     const record = await saveToAirtable(name, date);
-    people.push(record);
-    renderAll();
+    if (record) { people.push(record); renderAll(); }
   }
 
   document.addEventListener('keydown', e => {
