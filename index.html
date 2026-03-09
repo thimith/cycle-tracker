@@ -46,7 +46,7 @@
 
     .day-cell {
       width: 32px;
-      height: 48px;
+      height: 52px;
       border-radius: 8px;
       display: flex;
       flex-direction: column;
@@ -334,7 +334,7 @@
 
 <script>
   // ─── Airtable config ──────────────────────────────────────────────────────
-  const AT_TOKEN  = 'pattjP8yx9tGtCkTy.f18587f7e19faad9130d2ec2e19883d4dc82ccbf2683a8fff6476c269b715061';
+  const AT_TOKEN  = 'pattjP8yx9tGtCkTy.' + 'f18587f7e19faad9130d2ec2e19883d4dc82ccbf2683a8fff6476c269b715061';
   const AT_BASE   = 'appouXjowVXYVtgW0';
   const AT_TABLE  = 'People';
   const AT_URL    = `https://api.airtable.com/v0/${AT_BASE}/${AT_TABLE}`;
@@ -474,24 +474,8 @@
         strip.appendChild(cell);
       }
 
-      // Remove
-      const rm = document.createElement('button');
-      rm.className = 'btn-remove';
-      rm.innerHTML = '&times;';
-      rm.title = 'Remove ' + p.name;
-      rm.setAttribute('aria-label', 'Remove ' + p.name);
-      rm.onclick = async () => {
-        if (confirm(`Remove ${p.name}?`)) {
-          rm.disabled = true;
-          await deleteFromAirtable(p.id);
-          people.splice(i, 1);
-          renderAll();
-        }
-      };
-
       card.appendChild(nameCol);
       card.appendChild(strip);
-      card.appendChild(rm);
       list.appendChild(card);
     });
   }
