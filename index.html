@@ -366,6 +366,7 @@
       body: JSON.stringify({ records: [{ fields: { Name: name, Date: date } }] })
     });
     const data = await res.json();
+    if (data.error) { alert('Airtable error: ' + data.error.message || data.error); return null; }
     return { id: data.records[0].id, name, date };
   }
 
@@ -509,8 +510,7 @@
     nameEl.value = '';
     dateEl.value = new Date().toISOString().split('T')[0];
     const record = await saveToAirtable(name, date);
-    people.push(record);
-    renderAll();
+    if (record) { people.push(record); renderAll(); }
   }
 
   document.addEventListener('keydown', e => {
