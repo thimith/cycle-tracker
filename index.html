@@ -366,7 +366,6 @@
       body: JSON.stringify({ records: [{ fields: { Name: name, Date: date } }] })
     });
     const data = await res.json();
-    alert('Airtable response: ' + JSON.stringify(data));
     if (data.error) { return null; }
     return { id: data.records[0].id, name, date };
   }
